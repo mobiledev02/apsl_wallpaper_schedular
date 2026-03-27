@@ -93,21 +93,27 @@
     },
     {
       "name": "flutter_local_notifications",
-      "rootUri": "file:///Users/appstonelab/.pub-cache/hosted/pub.dev/flutter_local_notifications-17.2.4",
+      "rootUri": "file:///Users/appstonelab/.pub-cache/hosted/pub.dev/flutter_local_notifications-19.5.0",
       "packageUri": "lib/",
-      "languageVersion": "2.17"
+      "languageVersion": "3.4"
     },
     {
       "name": "flutter_local_notifications_linux",
-      "rootUri": "file:///Users/appstonelab/.pub-cache/hosted/pub.dev/flutter_local_notifications_linux-4.0.1",
+      "rootUri": "file:///Users/appstonelab/.pub-cache/hosted/pub.dev/flutter_local_notifications_linux-6.0.0",
       "packageUri": "lib/",
-      "languageVersion": "2.17"
+      "languageVersion": "3.4"
     },
     {
       "name": "flutter_local_notifications_platform_interface",
-      "rootUri": "file:///Users/appstonelab/.pub-cache/hosted/pub.dev/flutter_local_notifications_platform_interface-7.2.0",
+      "rootUri": "file:///Users/appstonelab/.pub-cache/hosted/pub.dev/flutter_local_notifications_platform_interface-9.1.0",
       "packageUri": "lib/",
-      "languageVersion": "2.17"
+      "languageVersion": "3.4"
+    },
+    {
+      "name": "flutter_local_notifications_windows",
+      "rootUri": "file:///Users/appstonelab/.pub-cache/hosted/pub.dev/flutter_local_notifications_windows-1.0.3",
+      "packageUri": "lib/",
+      "languageVersion": "3.4"
     },
     {
       "name": "flutter_test",
@@ -249,13 +255,13 @@
     },
     {
       "name": "permission_handler",
-      "rootUri": "file:///Users/appstonelab/.pub-cache/hosted/pub.dev/permission_handler-11.4.0",
+      "rootUri": "file:///Users/appstonelab/.pub-cache/hosted/pub.dev/permission_handler-12.0.1",
       "packageUri": "lib/",
       "languageVersion": "3.5"
     },
     {
       "name": "permission_handler_android",
-      "rootUri": "file:///Users/appstonelab/.pub-cache/hosted/pub.dev/permission_handler_android-12.1.0",
+      "rootUri": "file:///Users/appstonelab/.pub-cache/hosted/pub.dev/permission_handler_android-13.0.1",
       "packageUri": "lib/",
       "languageVersion": "3.5"
     },
@@ -393,7 +399,7 @@
     },
     {
       "name": "timezone",
-      "rootUri": "file:///Users/appstonelab/.pub-cache/hosted/pub.dev/timezone-0.9.4",
+      "rootUri": "file:///Users/appstonelab/.pub-cache/hosted/pub.dev/timezone-0.10.1",
       "packageUri": "lib/",
       "languageVersion": "2.19"
     },
