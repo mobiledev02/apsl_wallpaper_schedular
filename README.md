@@ -38,7 +38,7 @@ Add to your `pubspec.yaml`:
 
 ```yaml
 dependencies:
-  apsl_wallpaper_scheduler: ^0.1.0
+  apsl_wallpaper_scheduler: ^0.2.0
 ```
 
 ---

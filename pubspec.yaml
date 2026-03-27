@@ -5,7 +5,7 @@ description: >-
   Schedule automatic daily wallpaper updates on Android. Download an image
   from any URL and set it as the Home Screen, Lock Screen, or Both at an
   exact time every day — even when the app is closed or the device reboots.
-version: 0.1.0
+version: 0.2.0
 homepage: https://github.com/mobiledev02/apsl_wallpaper_schedular
 repository: https://github.com/mobiledev02/apsl_wallpaper_schedular
 issue_tracker: https://github.com/mobiledev02/apsl_wallpaper_schedular/issues
@@ -17,13 +17,13 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
-  http: ^1.2.1
-  path_provider: ^2.1.2
+  http: ^1.2.2
+  path_provider: ^2.1.5
   android_alarm_manager_plus: ^5.0.0
   wallpaper_manager_flutter: ^1.0.1
-  shared_preferences: ^2.2.3
-  flutter_local_notifications: ^17.2.2
-  permission_handler: ^11.3.1
+  shared_preferences: ^2.5.3
+  flutter_local_notifications: ^19.5.0
+  permission_handler: ^12.0.0+1
 
 dev_dependencies:
   flutter_test:

@@ -1,3 +1,12 @@
+## 0.2.0
+
+* Bumped dependency versions for compatibility with modern Flutter apps:
+  * `flutter_local_notifications` upgraded from `^17.2.2` to `^19.5.0`.
+  * `permission_handler` upgraded from `^11.3.1` to `^12.0.0+1`.
+  * `shared_preferences` upgraded from `^2.2.3` to `^2.5.3`.
+  * `path_provider` upgraded from `^2.1.2` to `^2.1.5`.
+  * `http` upgraded from `^1.2.1` to `^1.2.2`.
+
 ## 0.1.0
 
 * Initial release.
