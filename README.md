@@ -40,7 +40,7 @@ Add to your `pubspec.yaml`:
 
 ```yaml
 dependencies:
-  apsl_wallpaper_scheduler: ^0.2.1
+  apsl_wallpaper_scheduler: ^0.2.2
 ```
 
 ---
@@ -459,6 +459,9 @@ await ApslWallpaperScheduler.deleteAllSchedules();
 2. **Self-rescheduling chain** — after each run the callback registers the next day's alarm. This is the only reliable pattern for exact daily scheduling.
 3. **Reboot resilience** — `rescheduleOnReboot: true` re-registers the alarm after device restart.
 4. **Battery optimisation** — requesting exemption prevents aggressive OEM battery savers (Samsung OneUI, MIUI, ColorOS…) from suppressing the alarm.
+5. **Stagger for same-time schedules** — each alarm waits `(alarmId % 10) × 2` seconds before its HTTP request, so multiple schedules at the same time never hit the image server simultaneously.
+6. **Retry on server errors** — HTTP 5xx responses and timeouts are retried up to 2 times with a 5-second delay, making updates resilient to transient server issues.
+7. **Isolated cache files** — each alarm downloads to its own temporary file (`apsl_wallpaper_cache_<alarmId>.png`), deleted after use, so concurrent alarms never interfere with each other.
 
 ---
 
@@ -468,7 +471,11 @@ await ApslWallpaperScheduler.deleteAllSchedules();
 |---------|-----|
 | Alarm never fires | Grant `SCHEDULE_EXACT_ALARM` and request battery-optimisation exemption. |
 | Works on stock Android but not Samsung/Xiaomi | Request battery-optimisation exemption — these OEMs kill background processes aggressively. |
+| Wallpaper stops updating after app is killed | Fixed in `0.2.2` — update to the latest version. |
+| One of two same-time schedules always fails | Fixed in `0.2.2` — stagger and retry logic handle simultaneous server requests. |
+| `schedule.lastError` shows HTTP 500 | The image server returned an error. The package will retry automatically (up to 2×). Check that your image URL is valid and accessible. |
 | `result.requiredPermissions` is non-null after `createSchedule` | Check `hasExactAlarm` and `hasBatteryExemption` and handle each with a dialog. |
+| `createSchedule` returns an error about the URL | The `imageUrl` must be non-empty and start with `http://` or `https://`. |
 | Build fails with `Unresolved reference 'shim'` | You have an old `workmanager` version. Remove it. |
 | `isCoreLibraryDesugaringEnabled` error | Add the desugaring config to `build.gradle.kts` as shown in setup. |
 | `ApslWallpaperScheduler is not initialised` | Call `ApslWallpaperScheduler.initialize()` in `main()` before `runApp`. |

@@ -1,3 +1,65 @@
+## 0.2.2
+
+**Bug fixes & reliability improvements**
+
+* **Fixed: wallpaper stops updating after app is killed and reopened.**
+  Added `DartPluginRegistrant.ensureInitialized()` in the background alarm
+  callback. Without it, Dart-side plugin registrations (`SharedPreferences`,
+  `path_provider`) never ran when the app process was dead, causing the
+  callback to exit silently with no wallpaper update.
+
+* **Fixed: wrong wallpaper set when multiple schedules fire at the same time.**
+  Each alarm now downloads to its own isolated cache file
+  (`apsl_wallpaper_cache_<alarmId>.png`) instead of a single shared file.
+  Previously the last download always overwrote earlier ones, so only one
+  schedule's image was ever applied.
+
+* **Fixed: alarm chain could skip a day near midnight.**
+  `DateTime.now()` is now captured as the very first line of the callback,
+  before any `await`. Previously it was captured after a potentially slow
+  image download, which could drift past midnight and schedule the next alarm
+  two days ahead instead of one.
+
+* **Fixed: slow or unreachable server could permanently break the alarm chain.**
+  Added a 30-second timeout on every image download. Previously an unresponsive
+  server caused the background isolate to hang indefinitely, blocking the
+  self-reschedule step that maintains the daily chain.
+
+* **Fixed: uncaught exception in self-reschedule permanently broke the alarm chain.**
+  The `AndroidAlarmManager.oneShotAt` call is now wrapped in its own
+  `try-catch`. Any failure is recorded in `lastError` and the chain survives.
+
+* **Fixed: JSON corruption silently wiped all schedules.**
+  `ScheduleStorage` now writes the current valid snapshot as a backup key
+  before every save. On next load, if the primary entry is corrupt, it
+  automatically recovers from the backup instead of returning an empty list.
+
+* **Fixed: invalid image URLs only discovered at alarm fire time (hours later).**
+  `createSchedule` and `updateSchedule` now validate the URL immediately —
+  must be non-empty and start with `http://` or `https://`. A clear error is
+  returned at creation time instead of a silent failure during the background
+  alarm callback.
+
+**New features**
+
+* **Retry on server errors.** The image download now retries up to 2 times
+  (with a 5-second pause between attempts) when the server returns an HTTP
+  5xx error or the request times out. 4xx errors (bad URL, not found) are not
+  retried. This makes background updates resilient to transient server issues.
+
+* **Stagger for same-time schedules.** Each alarm callback now waits
+  `(alarmId % 10) × 2` seconds (0–18 s) before making its HTTP request.
+  When multiple schedules are set to the same time, their requests are spread
+  out so the image server never receives simultaneous hits, preventing the
+  rate-limiting HTTP 500 errors that caused one of every two same-time
+  schedules to fail.
+
+* **Cache cleanup.** The per-alarm image cache file is always deleted after
+  `setWallpaper` completes (success or failure), preventing stale files from
+  accumulating in the app's documents directory.
+
+---
+
 ## 0.2.1
 
 * `requestBatteryOptimizationExemption()` now returns `Future<bool>` instead of `Future<void>`.
