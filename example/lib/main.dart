@@ -2,43 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:apsl_wallpaper_scheduler/apsl_wallpaper_scheduler.dart';
 import 'package:flutter/services.dart';
 
-double lat = 21.2319998,
-    lng = 72.8211632,
-    deviceWidth = 1080.0,
-    deviceHeight = 2400.0;
-
-List<String> urlLinks = [
-  "https://tools.shubhpanchang.com/api/live-wallpaper?type=choghadiya&locale=en&latitude=$lat&longitude=$lng&width=$deviceWidth&height=$deviceHeight",
-  "https://tools.shubhpanchang.com/api/live-wallpaper?type=choghadiya&locale=gu&latitude=$lat&longitude=$lng&width=$deviceWidth&height=$deviceHeight",
-  "https://tools.shubhpanchang.com/api/live-wallpaper?type=choghadiya&locale=mr&latitude=$lat&longitude=$lng&width=$deviceWidth&height=$deviceHeight",
-  "https://tools.shubhpanchang.com/api/live-wallpaper?type=choghadiya&locale=hi&latitude=$lat&longitude=$lng&width=$deviceWidth&height=$deviceHeight",
-  "https://tools.shubhpanchang.com/api/live-wallpaper?type=choghadiya&locale=en&latitude=$lat&longitude=$lng&width=$deviceWidth&height=$deviceHeight&screen=2",
-  "https://tools.shubhpanchang.com/api/live-wallpaper?type=choghadiya&locale=gu&latitude=$lat&longitude=$lng&width=$deviceWidth&height=$deviceHeight&screen=2",
-  "https://tools.shubhpanchang.com/api/live-wallpaper?type=choghadiya&locale=mr&latitude=$lat&longitude=$lng&width=$deviceWidth&height=$deviceHeight&screen=2",
-  "https://tools.shubhpanchang.com/api/live-wallpaper?type=choghadiya&locale=hi&latitude=$lat&longitude=$lng&width=$deviceWidth&height=$deviceHeight&screen=2",
-  "https://tools.shubhpanchang.com/api/live-wallpaper?locale=en&latitude=$lat&longitude=$lng&width=$deviceWidth&height=$deviceHeight&screen=3&background=1&center=false",
-  "https://tools.shubhpanchang.com/api/live-wallpaper?locale=hi&latitude=$lat&longitude=$lng&width=$deviceWidth&height=$deviceHeight&screen=3&background=2&center=false",
-  "https://tools.shubhpanchang.com/api/live-wallpaper?locale=gu&latitude=$lat&longitude=$lng&width=$deviceWidth&height=$deviceHeight&screen=3&background=3&center=false",
-  "https://tools.shubhpanchang.com/api/live-wallpaper?locale=mr&latitude=$lat&longitude=$lng&width=$deviceWidth&height=$deviceHeight&screen=3&background=4&center=false",
-  "https://tools.shubhpanchang.com/api/live-wallpaper?locale=en&latitude=$lat&longitude=$lng&width=$deviceWidth&height=$deviceHeight&screen=3&background=5&center=false",
-];
-
-// List<String> urlLinks = [
-//   "https://tools.shubhpanchang.com/api/live-wallpaper?type=choghadiya&locale=en&latitude=21.2319998&longitude=72.8211632&width=1080.0&height=2400.0",
-//   "https://tools.shubhpanchang.com/api/live-wallpaper?type=choghadiya&locale=gu&latitude=21.2319998&longitude=72.8211632&width=1080.0&height=2400.0",
-//   "https://tools.shubhpanchang.com/api/live-wallpaper?type=choghadiya&locale=mr&latitude=21.2319998&longitude=72.8211632&width=1080.0&height=2400.0",
-//   "https://tools.shubhpanchang.com/api/live-wallpaper?type=choghadiya&locale=hi&latitude=21.2319998&longitude=72.8211632&width=1080.0&height=2400.0",
-//   "https://tools.shubhpanchang.com/api/live-wallpaper?type=choghadiya&locale=en&latitude=21.2319998&longitude=72.8211632&width=1080.0&height=2400.0&screen=2",
-//   "https://tools.shubhpanchang.com/api/live-wallpaper?type=choghadiya&locale=gu&latitude=21.2319998&longitude=72.8211632&width=1080.0&height=2400.0&screen=2",
-//   "https://tools.shubhpanchang.com/api/live-wallpaper?type=choghadiya&locale=mr&latitude=21.2319998&longitude=72.8211632&width=1080.0&height=2400.0&screen=2",
-//   "https://tools.shubhpanchang.com/api/live-wallpaper?type=choghadiya&locale=hi&latitude=21.2319998&longitude=72.8211632&width=1080.0&height=2400.0&screen=2",
-//   "https://tools.shubhpanchang.com/api/live-wallpaper?locale=en&latitude=21.2319998&longitude=72.8211632&width=1080.0&height=2400.0&screen=3&background=1&center=false",
-//   "https://tools.shubhpanchang.com/api/live-wallpaper?locale=hi&latitude=21.2319998&longitude=72.8211632&width=1080.0&height=2400.0&screen=3&background=2&center=false",
-//   "https://tools.shubhpanchang.com/api/live-wallpaper?locale=gu&latitude=21.2319998&longitude=72.8211632&width=1080.0&height=2400.0&screen=3&background=3&center=false",
-//   "https://tools.shubhpanchang.com/api/live-wallpaper?locale=mr&latitude=21.2319998&longitude=72.8211632&width=1080.0&height=2400.0&screen=3&background=4&center=false",
-//   "https://tools.shubhpanchang.com/api/live-wallpaper?locale=en&latitude=21.2319998&longitude=72.8211632&width=1080.0&height=2400.0&screen=3&background=5&center=false",
-// ];
-
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
@@ -68,21 +31,6 @@ class MyApp extends StatelessWidget {
 // ─────────────────────────────────────────────────────────────────────────────
 // Demo screen — shows all package operations
 // ─────────────────────────────────────────────────────────────────────────────
-
-// "choghadiya":
-//     "https://tools.shubhpanchang.com/api/live-wallpaper?type=choghadiya&locale=$language&latitude=$lat&longitude=$lng&width=$deviceWidth&height=$deviceHeight",
-// "gowri":
-//     "https://tools.shubhpanchang.com/api/live-wallpaper?type=gowri&locale=$language&latitude=$lat&longitude=$lng&width=$deviceWidth&height=$deviceHeight",
-// "hora":
-//     "https://tools.shubhpanchang.com/api/live-wallpaper?type=hora&locale=$language&latitude=$lat&longitude=$lng&width=$deviceWidth&height=$deviceHeight",
-// "choghadiya_clock":
-//     "https://tools.shubhpanchang.com/api/live-wallpaper?type=choghadiya&locale=$language&latitude=$lat&longitude=$lng&width=$deviceWidth&height=$deviceHeight&screen=2",
-// "gowri_clock":
-//     "https://tools.shubhpanchang.com/api/live-wallpaper?type=gowri&locale=$language&latitude=$lat&longitude=$lng&width=$deviceWidth&height=$deviceHeight&screen=2",
-// "hora_clock":
-//     "https://tools.shubhpanchang.com/api/live-wallpaper?type=hora&locale=$language&latitude=$lat&longitude=$lng&width=$deviceWidth&height=$deviceHeight&screen=2",
-// "quotes":
-//     "https://tools.shubhpanchang.com/api/live-wallpaper?locale=$originalLanguage&latitude=$lat&longitude=$lng&width=$deviceWidth&height=$deviceHeight&screen=3&background=$backgroundId"
 
 class SchedulerDemoScreen extends StatefulWidget {
   const SchedulerDemoScreen({super.key});
@@ -297,50 +245,22 @@ class _SchedulerDemoScreenState extends State<SchedulerDemoScreen>
           ),
         ],
       ),
-      body: Column(
-        children: [
-          SizedBox(
-            height: 200,
-            child: ListView.separated(
-                separatorBuilder: (context, index) => Divider(),
-                itemCount: urlLinks.length,
-                itemBuilder: (context, index) => Row(
-                      children: [
-                        Expanded(
-                          child: Text(
-                            urlLinks[index],
-                          ),
-                        ),
-                        IconButton(
-                          onPressed: () async {
-                            await Clipboard.setData(
-                                ClipboardData(text: urlLinks[index]));
-                          },
-                          icon: Icon(Icons.copy),
-                        )
-                      ],
-                    )),
-          ),
-          Expanded(
-            child: _loading
-                ? const Center(child: CircularProgressIndicator())
-                : _schedules.isEmpty
-                    ? const Center(
-                        child: Text(
-                          'No schedules yet.\nTap + to create one.',
-                          textAlign: TextAlign.center,
-                          style: TextStyle(fontSize: 16),
-                        ),
-                      )
-                    : ListView.separated(
-                        padding: const EdgeInsets.all(16),
-                        itemCount: _schedules.length,
-                        separatorBuilder: (_, __) => const SizedBox(height: 8),
-                        itemBuilder: (_, i) => _buildTile(_schedules[i]),
-                      ),
-          ),
-        ],
-      ),
+      body: _loading
+          ? const Center(child: CircularProgressIndicator())
+          : _schedules.isEmpty
+              ? const Center(
+                  child: Text(
+                    'No schedules yet.\nTap + to create one.',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(fontSize: 16),
+                  ),
+                )
+              : ListView.separated(
+                  padding: const EdgeInsets.all(16),
+                  itemCount: _schedules.length,
+                  separatorBuilder: (_, __) => const SizedBox(height: 8),
+                  itemBuilder: (_, i) => _buildTile(_schedules[i]),
+                ),
       floatingActionButton: FloatingActionButton(
         onPressed: _showCreateDialog,
         child: const Icon(Icons.add),
