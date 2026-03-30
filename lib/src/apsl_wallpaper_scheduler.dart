@@ -297,11 +297,14 @@ class ApslWallpaperScheduler {
 
   /// Opens the system battery-optimisation exemption dialog.
   ///
+  /// Returns `true` if the exemption is (or was already) granted after the
+  /// user returns from the system dialog, `false` if they declined.
+  ///
   /// Call this **after** showing your own rationale dialog.
   /// Without this exemption, Doze mode on aggressive OEMs (Samsung, Xiaomi,
   /// OnePlus, Realme…) may suppress alarms even when the alarm permission is
   /// granted.
-  static Future<void> requestBatteryOptimizationExemption() =>
+  static Future<bool> requestBatteryOptimizationExemption() =>
       AlarmService.requestBatteryExemption();
 
   // ── Internal ──────────────────────────────────────────────────────────────

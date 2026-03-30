@@ -1,6 +1,8 @@
 # apsl_wallpaper_scheduler
 
 [![pub.dev](https://img.shields.io/pub/v/apsl_wallpaper_scheduler.svg)](https://pub.dev/packages/apsl_wallpaper_scheduler)
+[![likes](https://img.shields.io/pub/likes/apsl_wallpaper_scheduler)](https://pub.dev/packages/apsl_wallpaper_scheduler/score)
+[![popularity](https://img.shields.io/pub/popularity/apsl_wallpaper_scheduler)](https://pub.dev/packages/apsl_wallpaper_scheduler/score)
 [![GitHub](https://img.shields.io/badge/GitHub-mobiledev02%2Fapsl__wallpaper__schedular-blue?logo=github)](https://github.com/mobiledev02/apsl_wallpaper_schedular)
 
 A Flutter package for scheduling automatic daily wallpaper updates on **Android**.
@@ -38,7 +40,7 @@ Add to your `pubspec.yaml`:
 
 ```yaml
 dependencies:
-  apsl_wallpaper_scheduler: ^0.2.0
+  apsl_wallpaper_scheduler: ^0.2.1
 ```
 
 ---
@@ -191,7 +193,9 @@ Future<void> _ensurePermissions(BuildContext context) async {
       ),
     );
     if (proceed == true) {
-      await ApslWallpaperScheduler.requestBatteryOptimizationExemption();
+      final granted = await ApslWallpaperScheduler.requestBatteryOptimizationExemption();
+      // granted == true  → exemption was allowed
+      // granted == false → user declined; alarms may be suppressed on some OEMs
     }
   }
 }
@@ -263,7 +267,8 @@ if (!result.isSuccess) {
         ),
       );
       if (proceed == true) {
-        await ApslWallpaperScheduler.requestBatteryOptimizationExemption();
+        final granted = await ApslWallpaperScheduler.requestBatteryOptimizationExemption();
+        // granted == false → user declined; warn them alarms may be unreliable
       }
     }
   } else {
@@ -393,7 +398,7 @@ await ApslWallpaperScheduler.deleteAllSchedules();
 | `hasExactAlarmPermission()` | `Future<bool>` | Checks `SCHEDULE_EXACT_ALARM` only. |
 | `isBatteryOptimizationExempt()` | `Future<bool>` | Checks battery exemption only. |
 | `requestExactAlarmPermission()` | `Future<bool>` | Opens system settings for exact alarm. Call after your dialog. |
-| `requestBatteryOptimizationExemption()` | `Future<void>` | Opens system battery exemption dialog. Call after your dialog. |
+| `requestBatteryOptimizationExemption()` | `Future<bool>` | Opens system battery exemption dialog. Returns `true` if granted. Call after your dialog. |
 
 ### `PermissionStatus`
 

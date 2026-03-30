@@ -66,11 +66,10 @@ class AlarmService {
   /// Requests battery-optimisation exemption (shows system dialog).
   /// Without this, aggressive OEM battery savers (Samsung, Xiaomi, etc.)
   /// may suppress alarms even when [SCHEDULE_EXACT_ALARM] is granted.
-  static Future<void> requestBatteryExemption() async {
-    if (!Platform.isAndroid) return;
+  static Future<bool> requestBatteryExemption() async {
+    if (!Platform.isAndroid) return true;
     final status = await Permission.ignoreBatteryOptimizations.status;
-    if (!status.isGranted) {
-      await Permission.ignoreBatteryOptimizations.request();
-    }
+    if (status.isGranted) return true;
+    return (await Permission.ignoreBatteryOptimizations.request()).isGranted;
   }
 }

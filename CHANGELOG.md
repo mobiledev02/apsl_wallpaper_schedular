@@ -1,3 +1,9 @@
+## 0.2.1
+
+* `requestBatteryOptimizationExemption()` now returns `Future<bool>` instead of `Future<void>`.
+  * Returns `true` if the battery-optimisation exemption is (or was already) granted, `false` if the user declined.
+  * Allows callers to react immediately to the user's decision without a follow-up `checkPermissions()` call.
+
 ## 0.2.0
 
 * Bumped dependency versions for compatibility with modern Flutter apps:
