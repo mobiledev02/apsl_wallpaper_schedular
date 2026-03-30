@@ -61,6 +61,12 @@ class WallpaperService {
   ///
   /// [targetValue] must be 1 (home), 2 (lock), or 3 (both).
   ///
+  /// When [targetValue] is 3 (both), the wallpaper is set on home and lock
+  /// screens via two separate calls instead of a single combined call.
+  /// Many Android OEM implementations (MIUI, One UI, etc.) do not reliably
+  /// honour the combined FLAG_SYSTEM|FLAG_LOCK bitmask in a single
+  /// WallpaperManager.setStream() call, causing it to silently fail.
+  ///
   /// Always deletes the per-alarm cache file after use — whether the
   /// wallpaper set succeeds or throws — to avoid stale files accumulating.
   static Future<void> setWallpaper(int targetValue, int alarmId) async {
@@ -69,9 +75,15 @@ class WallpaperService {
       throw Exception(
           'Wallpaper cache file not found. Call downloadAndSave() first.');
     }
-    final location = _toPluginLocation(targetValue);
+    final plugin = WallpaperManagerFlutter();
     try {
-      await WallpaperManagerFlutter().setWallpaper(file, location);
+      if (targetValue == 3) {
+        // Set home and lock screens separately for reliable OEM compatibility.
+        await plugin.setWallpaper(file, WallpaperManagerFlutter.homeScreen);
+        await plugin.setWallpaper(file, WallpaperManagerFlutter.lockScreen);
+      } else {
+        await plugin.setWallpaper(file, _toPluginLocation(targetValue));
+      }
     } finally {
       // Delete regardless of success or failure to keep storage clean.
       await file.delete().catchError((_) => file);

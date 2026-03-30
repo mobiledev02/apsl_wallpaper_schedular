@@ -1,3 +1,17 @@
+## 0.2.4
+
+**Bug fixes**
+
+* **Fixed: setting wallpaper on "Both Screens" always failed.**
+  Many Android OEM implementations (Samsung One UI, Xiaomi, etc.) do not
+  reliably honour the combined `FLAG_SYSTEM | FLAG_LOCK` bitmask when passed
+  as a single `WallpaperManager.setStream()` call, causing it to silently
+  fail. The wallpaper is now applied via two separate calls — one for the
+  Home Screen and one for the Lock Screen — which works correctly across all
+  tested devices. Individual Home Screen and Lock Screen targets are unchanged.
+
+---
+
 ## 0.2.3
 
 **Bug fixes**
