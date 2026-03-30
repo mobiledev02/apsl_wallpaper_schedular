@@ -5,7 +5,7 @@ description: >-
   Schedule automatic daily wallpaper updates on Android. Download an image
   from any URL and set it as the Home Screen, Lock Screen, or Both at an
   exact time every day — even when the app is closed or the device reboots.
-version: 0.2.2
+version: 0.2.3
 homepage: https://github.com/mobiledev02/apsl_wallpaper_schedular
 repository: https://github.com/mobiledev02/apsl_wallpaper_schedular
 issue_tracker: https://github.com/mobiledev02/apsl_wallpaper_schedular/issues

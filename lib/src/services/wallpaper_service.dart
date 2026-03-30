@@ -49,6 +49,8 @@ class WallpaperService {
         if (response.statusCode < 500) throw lastError;
       } on TimeoutException {
         lastError = Exception('Image download timed out: $url');
+      } on http.ClientException {
+        lastError = Exception('Connection closed during download: $url');
       }
     }
 

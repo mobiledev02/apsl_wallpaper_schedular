@@ -1,3 +1,16 @@
+## 0.2.3
+
+**Bug fixes**
+
+* **Fixed: `ClientException: connection closed while receiving data` not retried.**
+  Added `http.ClientException` to the retry-eligible exceptions in the image
+  download logic. Previously, if the server dropped the connection mid-transfer,
+  the error propagated immediately with no retry. Now it retries up to 2 times
+  (with a 5-second pause between attempts), consistent with how timeouts and
+  HTTP 5xx errors are handled.
+
+---
+
 ## 0.2.2
 
 **Bug fixes & reliability improvements**
