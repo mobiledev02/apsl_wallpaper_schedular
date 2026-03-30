@@ -18,12 +18,28 @@ class ScheduleStorage {
           .map((e) => ScheduleRecord.fromJson(e as Map<String, dynamic>))
           .toList();
     } catch (_) {
-      return [];
+      // Primary data is corrupted — fall back to the last-known-good backup.
+      final backup = prefs.getString('${_key}_backup');
+      if (backup == null || backup.isEmpty) return [];
+      try {
+        final list = jsonDecode(backup) as List;
+        return list
+            .map((e) => ScheduleRecord.fromJson(e as Map<String, dynamic>))
+            .toList();
+      } catch (_) {
+        return [];
+      }
     }
   }
 
   static Future<void> saveAll(List<ScheduleRecord> records) async {
     final prefs = await SharedPreferences.getInstance();
+    // Snapshot the current valid data as a backup before overwriting,
+    // so a crash mid-write never leaves the user with zero schedules.
+    final current = prefs.getString(_key);
+    if (current != null && current.isNotEmpty) {
+      await prefs.setString('${_key}_backup', current);
+    }
     await prefs.setString(
       _key,
       jsonEncode(records.map((r) => r.toJson()).toList()),

@@ -4,6 +4,8 @@
 // build so that @pragma('vm:entry-point') is honoured by the tree shaker.
 // ApslWallpaperScheduler.initialize() satisfies this requirement.
 
+import 'dart:ui' show DartPluginRegistrant;
+
 import 'package:android_alarm_manager_plus/android_alarm_manager_plus.dart';
 import 'package:flutter/widgets.dart';
 import '../storage/schedule_storage.dart';
@@ -19,8 +21,24 @@ import '../services/notification_service.dart';
 /// `true`) is the only truly exact alarm API available.
 @pragma('vm:entry-point')
 void apslAlarmCallback(int alarmId) async {
-  // Initialise Flutter binding so plugin MethodChannels work in this isolate.
+  // Capture time immediately — before any awaits — so the next-day reschedule
+  // is computed relative to when the alarm actually fired, not after a
+  // potentially slow image download that could drift past midnight.
+  final now = DateTime.now();
+
+  // Both calls are required for plugins (SharedPreferences, path_provider,
+  // wallpaper_manager_flutter, etc.) to work in a background isolate when
+  // the app process has been killed. Without DartPluginRegistrant the Dart-side
+  // plugin registrations never run, causing SharedPreferences to return null
+  // and the callback to exit silently with no wallpaper update.
   WidgetsFlutterBinding.ensureInitialized();
+  DartPluginRegistrant.ensureInitialized();
+
+  // Stagger each alarm by (alarmId % 10) * 2 seconds (0–18 s).
+  // When multiple schedules fire at the same time, this spreads their HTTP
+  // requests so they never hit the image server simultaneously, preventing
+  // the server from rate-limiting and returning HTTP 500 on the second request.
+  await Future.delayed(Duration(seconds: (alarmId % 10) * 2));
 
   // Look up the schedule that owns this alarm.
   final record = await ScheduleStorage.findByAlarmId(alarmId);
@@ -28,7 +46,10 @@ void apslAlarmCallback(int alarmId) async {
 
   // Perform the wallpaper update.
   try {
-    await WallpaperService.downloadAndSet(record.imageUrl, record.targetValue);
+    // Pass alarmId so each schedule uses its own isolated cache file,
+    // preventing race conditions when multiple schedules fire at the same time.
+    await WallpaperService.downloadAndSet(
+        record.imageUrl, record.targetValue, record.alarmId);
     await ScheduleStorage.updateLastUpdated(record.id);
     await NotificationService.showUpdateNotification(
       notifId: alarmId,
@@ -39,16 +60,23 @@ void apslAlarmCallback(int alarmId) async {
   }
 
   // Reschedule for the same time tomorrow so the daily chain continues.
-  final now = DateTime.now();
-  final next = DateTime(now.year, now.month, now.day, record.hour, record.minute)
-      .add(const Duration(days: 1));
-  await AndroidAlarmManager.oneShotAt(
-    next,
-    alarmId,
-    apslAlarmCallback,
-    exact: true,
-    wakeup: true,
-    allowWhileIdle: true,
-    rescheduleOnReboot: true,
-  );
+  // Uses `now` captured before the download to avoid midnight-drift bugs.
+  final next =
+      DateTime(now.year, now.month, now.day, record.hour, record.minute)
+          .add(const Duration(days: 1));
+  try {
+    await AndroidAlarmManager.oneShotAt(
+      next,
+      alarmId,
+      apslAlarmCallback,
+      exact: true,
+      wakeup: true,
+      allowWhileIdle: true,
+      rescheduleOnReboot: true,
+    );
+  } catch (e) {
+    // If rescheduling fails the daily chain would break permanently, so log it.
+    await ScheduleStorage.updateLastError(
+        record.id, 'Reschedule failed: ${e.toString()}');
+  }
 }

@@ -42,7 +42,7 @@
     },
     {
       "name": "apsl_wallpaper_scheduler",
-      "version": "0.1.0",
+      "version": "0.2.1",
       "dependencies": [
         "android_alarm_manager_plus",
         "flutter",
@@ -157,7 +157,7 @@
     },
     {
       "name": "permission_handler",
-      "version": "11.4.0",
+      "version": "12.0.1",
       "dependencies": [
         "flutter",
         "meta",
@@ -170,12 +170,13 @@
     },
     {
       "name": "flutter_local_notifications",
-      "version": "17.2.4",
+      "version": "19.5.0",
       "dependencies": [
         "clock",
         "flutter",
         "flutter_local_notifications_linux",
         "flutter_local_notifications_platform_interface",
+        "flutter_local_notifications_windows",
         "timezone"
       ]
     },
@@ -340,7 +341,7 @@
     },
     {
       "name": "permission_handler_android",
-      "version": "12.1.0",
+      "version": "13.0.1",
       "dependencies": [
         "flutter",
         "permission_handler_platform_interface"
@@ -348,22 +349,34 @@
     },
     {
       "name": "timezone",
-      "version": "0.9.4",
+      "version": "0.10.1",
       "dependencies": [
+        "http",
         "path"
       ]
     },
     {
       "name": "flutter_local_notifications_platform_interface",
-      "version": "7.2.0",
+      "version": "9.1.0",
       "dependencies": [
-        "flutter",
         "plugin_platform_interface"
       ]
     },
     {
+      "name": "flutter_local_notifications_windows",
+      "version": "1.0.3",
+      "dependencies": [
+        "ffi",
+        "flutter",
+        "flutter_local_notifications_platform_interface",
+        "meta",
+        "timezone",
+        "xml"
+      ]
+    },
+    {
       "name": "flutter_local_notifications_linux",
-      "version": "4.0.1",
+      "version": "6.0.0",
       "dependencies": [
         "dbus",
         "ffi",
@@ -514,17 +527,26 @@
       ]
     },
     {
-      "name": "xdg_directories",
-      "version": "1.1.0",
+      "name": "xml",
+      "version": "6.6.1",
       "dependencies": [
+        "collection",
         "meta",
-        "path"
+        "petitparser"
       ]
     },
     {
       "name": "ffi",
       "version": "2.2.0",
       "dependencies": []
+    },
+    {
+      "name": "xdg_directories",
+      "version": "1.1.0",
+      "dependencies": [
+        "meta",
+        "path"
+      ]
     },
     {
       "name": "dbus",
@@ -570,12 +592,11 @@
       ]
     },
     {
-      "name": "xml",
-      "version": "6.6.1",
+      "name": "petitparser",
+      "version": "7.0.2",
       "dependencies": [
         "collection",
-        "meta",
-        "petitparser"
+        "meta"
       ]
     },
     {
@@ -625,14 +646,6 @@
       "dependencies": [
         "collection",
         "hooks"
-      ]
-    },
-    {
-      "name": "petitparser",
-      "version": "7.0.2",
-      "dependencies": [
-        "collection",
-        "meta"
       ]
     },
     {

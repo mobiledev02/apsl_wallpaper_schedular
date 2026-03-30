@@ -58,6 +58,8 @@ class ApslWallpaperScheduler {
   static Future<ScheduleResult> createSchedule(
       WallpaperScheduleConfig config) async {
     _assertInitialized();
+    final urlValidationError = _validateUrl(config.imageUrl);
+    if (urlValidationError != null) return ScheduleResult.failure(urlValidationError);
     try {
       final alarmId = await ScheduleStorage.nextAlarmId();
       final id = DateTime.now().millisecondsSinceEpoch.toString();
@@ -107,6 +109,8 @@ class ApslWallpaperScheduler {
     required WallpaperScheduleConfig config,
   }) async {
     _assertInitialized();
+    final urlValidationError = _validateUrl(config.imageUrl);
+    if (urlValidationError != null) return ScheduleResult.failure(urlValidationError);
     try {
       final existing = await ScheduleStorage.findById(id);
       if (existing == null) {
@@ -317,5 +321,17 @@ class ApslWallpaperScheduler {
         'after WidgetsFlutterBinding.ensureInitialized().',
       );
     }
+  }
+
+  /// Returns an error message if [url] is invalid, or `null` if it is valid.
+  /// Catches bad URLs at schedule-creation time rather than silently failing
+  /// hours later when the alarm fires in the background.
+  static String? _validateUrl(String url) {
+    final trimmed = url.trim();
+    if (trimmed.isEmpty) return 'Image URL cannot be empty.';
+    if (!trimmed.startsWith('http://') && !trimmed.startsWith('https://')) {
+      return 'Image URL must start with http:// or https://.';
+    }
+    return null;
   }
 }
