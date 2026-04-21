@@ -55,4 +55,35 @@ class NotificationService {
       ),
     );
   }
+
+  /// Shows a notification when a wallpaper update fails.
+  /// Uses the first line of [reason] so the structured error stays readable.
+  static Future<void> showFailureNotification({
+    required int notifId,
+    required String scheduleName,
+    required String reason,
+  }) async {
+    // Re-init for background isolate (cheap if already initialised).
+    const androidInit = AndroidInitializationSettings('@mipmap/ic_launcher');
+    await _plugin
+        .initialize(const InitializationSettings(android: androidInit));
+
+    // First line is the short category+summary, e.g. "[NO_INTERNET] Attempt 1/3 — ..."
+    final shortReason = reason.split('\n').first;
+
+    await _plugin.show(
+      notifId + 10000, // offset to avoid collision with success notification IDs
+      'Wallpaper Update Failed — $scheduleName',
+      shortReason,
+      const NotificationDetails(
+        android: AndroidNotificationDetails(
+          _channelId,
+          _channelName,
+          channelDescription: _channelDesc,
+          importance: Importance.high,
+          priority: Priority.high,
+        ),
+      ),
+    );
+  }
 }

@@ -1,0 +1,28 @@
+# Dart/Flutter generated
+.dart_tool/
+.packages
+.pub/
+build/
+
+# Flutter plugin resolution (auto-generated)
+.flutter-plugins
+.flutter-plugins-dependencies
+
+# Android local machine config
+local.properties
+*.keystore
+!default.keystore
+
+# macOS
+.DS_Store
+
+# IDE
+.idea/
+.vscode/
+*.iml
+*.swp
+
+# Library packages must not commit pubspec.lock (consumers resolve their own versions).
+# The example app lock file is kept so CI always builds against known-good versions.
+pubspec.lock
+!example/pubspec.lock

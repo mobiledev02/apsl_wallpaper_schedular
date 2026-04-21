@@ -44,19 +44,52 @@ void apslAlarmCallback(int alarmId) async {
   final record = await ScheduleStorage.findByAlarmId(alarmId);
   if (record == null || !record.isActive) return;
 
-  // Perform the wallpaper update.
+  // ── CORE ──────────────────────────────────────────────────────────────────
+  // Isolated try-catch: ONLY the wallpaper download+set is here.
+  // Notifications and storage updates are intentionally outside so that a
+  // failure in any helper can never make the core appear to have failed, and
+  // a helper crash can never prevent tomorrow's reschedule from running.
+  bool wallpaperSuccess = false;
+  Object? coreError;
   try {
     // Pass alarmId so each schedule uses its own isolated cache file,
     // preventing race conditions when multiple schedules fire at the same time.
     await WallpaperService.downloadAndSet(
         record.imageUrl, record.targetValue, record.alarmId);
-    await ScheduleStorage.updateLastUpdated(record.id);
-    await NotificationService.showUpdateNotification(
-      notifId: alarmId,
-      scheduleName: record.name,
-    );
+    wallpaperSuccess = true;
   } catch (e) {
-    await ScheduleStorage.updateLastError(record.id, e.toString());
+    coreError = e;
+  }
+
+  // ── STORAGE (helper — must never affect core result) ──────────────────────
+  try {
+    if (wallpaperSuccess) {
+      await ScheduleStorage.updateLastUpdated(record.id);
+    } else {
+      final timestamp = DateTime.now().toLocal().toString().substring(0, 19);
+      await ScheduleStorage.updateLastError(
+          record.id, '[$timestamp] ${coreError.toString()}');
+    }
+  } catch (_) {
+    // Storage failure is non-fatal; swallow silently.
+  }
+
+  // ── NOTIFICATION (helper — must never affect core result) ─────────────────
+  try {
+    if (wallpaperSuccess) {
+      await NotificationService.showUpdateNotification(
+        notifId: alarmId,
+        scheduleName: record.name,
+      );
+    } else {
+      await NotificationService.showFailureNotification(
+        notifId: alarmId,
+        scheduleName: record.name,
+        reason: coreError.toString(),
+      );
+    }
+  } catch (_) {
+    // Notification failure is non-fatal; swallow silently.
   }
 
   // Reschedule for the same time tomorrow so the daily chain continues.

@@ -1,3 +1,45 @@
+## 0.2.5
+
+**Reliability & error diagnostics improvements**
+
+* **Smarter error logs.** Every failure now stores a `[CATEGORY]` prefix
+  (`[NO_INTERNET]`, `[SERVER_ERROR]`, `[HTTP_404]`, `[DOWNLOAD_TIMEOUT]`,
+  `[CONNECTION_LOST]`, `[WALLPAPER_SET_FAILED]`, etc.), the attempt number
+  (`Attempt 2/3`), the server's response body (up to 300 chars — useful when
+  the backend returns a JSON error message), an actionable `Hint:`, and a
+  timestamp. Makes root-cause diagnosis fast without needing device logs.
+
+* **Failure push notification.** When a wallpaper update fails after all
+  retries, the user now receives a notification with the short error reason
+  instead of silent failure.
+
+* **Increased retry gap and timeout.** Retry delay raised from 5 s → 20 s;
+  per-attempt HTTP timeout raised from 30 s → 60 s for better tolerance on
+  slow or unstable connections.
+
+* **`SocketException` (no internet) now caught and retried.** Previously a
+  device with no network at alarm time would produce an unhandled exception
+  that fell through to the outer catch without a structured error message.
+
+* **URL validated before any network call.** Malformed or non-http(s) URLs
+  are rejected immediately with a clear `[INVALID_URL]` message instead of
+  crashing inside the download loop.
+
+* **Core wallpaper logic fully isolated from helpers.** Storage updates and
+  notifications now run in their own independent `try-catch` blocks. A crash
+  in either helper can no longer make a successful wallpaper set appear as a
+  failure, and can no longer prevent tomorrow's alarm from being rescheduled.
+
+* **OEM hint on `setWallpaper` failure.** When the wallpaper cannot be applied,
+  the error now includes a device-specific hint (MIUI / One UI / ColorOS
+  battery optimisation and "Display over other apps" permission).
+
+* **Added `.gitignore`.** Stops auto-generated files (`.dart_tool/`,
+  `.flutter-plugins-dependencies`, `local.properties`, `pubspec.lock`) from
+  being tracked in version control.
+
+---
+
 ## 0.2.4
 
 **Bug fixes**
