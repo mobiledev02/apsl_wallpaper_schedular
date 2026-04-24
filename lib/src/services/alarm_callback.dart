@@ -60,6 +60,14 @@ void apslAlarmCallback(int alarmId) async {
         rescheduleOnReboot: true,
       );
     } catch (_) {}
+    try {
+      await NotificationService.showRescheduleFailureNotification(
+        notifId: alarmId,
+        scheduleName: 'Schedule #$alarmId',
+        reason: 'Could not read schedule data — storage may be full or corrupted. '
+            'Retrying in 24 hours.',
+      ).timeout(const Duration(seconds: 10));
+    } catch (_) {}
     return;
   }
   if (record == null || !record.isActive) return;
@@ -157,12 +165,32 @@ void apslAlarmCallback(int alarmId) async {
     if (!scheduled) {
       // oneShotAt returns false when Android rejects the alarm — most commonly
       // a missing SCHEDULE_EXACT_ALARM permission on Android 12+.
-      await ScheduleStorage.updateLastError(record.id,
-          'Reschedule failed: Android rejected the alarm (SCHEDULE_EXACT_ALARM permission may have been revoked)');
+      const msg = 'Android rejected the next alarm — SCHEDULE_EXACT_ALARM '
+          'permission may have been revoked. Open the app and re-grant the '
+          '"Alarms & Reminders" permission to restore the schedule.';
+      try {
+        await ScheduleStorage.updateLastError(record.id, 'Reschedule failed: $msg');
+      } catch (_) {}
+      try {
+        await NotificationService.showRescheduleFailureNotification(
+          notifId: alarmId,
+          scheduleName: record.name,
+          reason: msg,
+        ).timeout(const Duration(seconds: 10));
+      } catch (_) {}
     }
   } catch (e) {
     // If rescheduling fails the daily chain would break permanently, so log it.
-    await ScheduleStorage.updateLastError(
-        record.id, 'Reschedule failed: ${e.toString()}');
+    final msg = 'Failed to register next alarm: ${e.toString()}';
+    try {
+      await ScheduleStorage.updateLastError(record.id, 'Reschedule failed: $msg');
+    } catch (_) {}
+    try {
+      await NotificationService.showRescheduleFailureNotification(
+        notifId: alarmId,
+        scheduleName: record.name,
+        reason: msg,
+      ).timeout(const Duration(seconds: 10));
+    } catch (_) {}
   }
 }

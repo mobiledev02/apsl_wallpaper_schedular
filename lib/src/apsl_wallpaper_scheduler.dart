@@ -35,13 +35,18 @@ class ApslWallpaperScheduler {
   /// Must be called once in `main()` **after**
   /// `WidgetsFlutterBinding.ensureInitialized()` and **before** `runApp`.
   /// Safe to call multiple times — subsequent calls are no-ops.
-  static Future<void> initialize() async {
+  /// [showErrorNotifications] — when `true`, a local notification is shown
+  /// whenever the daily alarm reschedule fails (e.g. permission revoked,
+  /// Android rejects the alarm). Useful during development or for surfacing
+  /// failures to the user so they can take corrective action.
+  /// Defaults to `false`.
+  static Future<void> initialize({bool showErrorNotifications = false}) async {
     if (_initialized) return;
     // Touch apslAlarmCallback so the tree shaker keeps it in the binary.
     // ignore: unnecessary_statements
     apslAlarmCallback;
     await AndroidAlarmManager.initialize();
-    await NotificationService.init();
+    await NotificationService.init(showErrorNotifications: showErrorNotifications);
     _initialized = true;
   }
 
