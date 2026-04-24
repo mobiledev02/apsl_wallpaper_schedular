@@ -20,7 +20,10 @@ Download an image from any URL and set it as the Home Screen, Lock Screen, or Bo
 - Uses Android's `setExactAndAllowWhileIdle` — truly exact timing (not the inexact `setRepeating`)
 - Survives app kill and device reboots (`rescheduleOnReboot: true`)
 - Stores all schedules in `SharedPreferences` — persists across launches
-- Shows a local notification after each successful update
+- Shows a local notification after each successful or failed update
+- Optional reschedule-failure notifications via `showErrorNotifications` flag
+- Configurable retry count and delay per schedule
+- Optional URL reachability check at schedule-creation time
 - Full CRUD: create, read, update, delete, start, stop
 - Permission checks return plain booleans — your app controls all dialogs
 
@@ -40,7 +43,7 @@ Add to your `pubspec.yaml`:
 
 ```yaml
 dependencies:
-  apsl_wallpaper_scheduler: ^0.2.2
+  apsl_wallpaper_scheduler: ^0.3.0
 ```
 
 ---
@@ -114,7 +117,12 @@ dependencies {
 ```dart
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await ApslWallpaperScheduler.initialize();
+  await ApslWallpaperScheduler.initialize(
+    // Set to true to receive a local notification whenever the daily alarm
+    // reschedule fails (e.g. permission revoked, Android rejects the alarm).
+    // Recommended during development; leave false in production.
+    showErrorNotifications: false,
+  );
   runApp(const MyApp());
 }
 ```
@@ -303,7 +311,10 @@ final result = await ApslWallpaperScheduler.createSchedule(
     imageUrl: 'https://example.com/morning.png',
     time: const TimeOfDay(hour: 8, minute: 0),
     target: WallpaperTarget.both,      // homeScreen | lockScreen | both
-    activate: true,                     // schedule alarm immediately (default)
+    activate: true,                    // schedule alarm immediately (default)
+    validateUrl: true,                 // HEAD-check the URL now (default false)
+    maxRetries: 2,                     // retry attempts on failure (default 2)
+    retryDelay: Duration(seconds: 20), // delay between retries (default 20 s)
   ),
 );
 
@@ -384,7 +395,7 @@ await ApslWallpaperScheduler.deleteAllSchedules();
 
 | Method | Returns | Description |
 |--------|---------|-------------|
-| `initialize()` | `Future<void>` | Must be called once in `main()`. |
+| `initialize({showErrorNotifications})` | `Future<void>` | Must be called once in `main()`. Pass `showErrorNotifications: true` to receive a notification whenever the alarm reschedule fails. |
 | `createSchedule(config)` | `Future<ScheduleResult>` | Creates and optionally activates a schedule. |
 | `updateSchedule(id, config)` | `Future<ScheduleResult>` | Updates an existing schedule. |
 | `deleteSchedule(id)` | `Future<bool>` | Deletes a schedule and cancels its alarm. |
@@ -417,6 +428,9 @@ await ApslWallpaperScheduler.deleteAllSchedules();
 | `time` | `TimeOfDay` | — | Daily trigger time. |
 | `target` | `WallpaperTarget` | `both` | Which screen(s) to update. |
 | `activate` | `bool` | `true` | Schedule alarm immediately. |
+| `validateUrl` | `bool` | `false` | Send a HEAD request at creation time to verify the URL is reachable. |
+| `maxRetries` | `int` | `2` | Number of retry attempts after the first download failure (5xx / timeout only). |
+| `retryDelay` | `Duration` | `20s` | Wait time between retry attempts. |
 
 ### `WallpaperTarget` enum
 
@@ -456,12 +470,13 @@ await ApslWallpaperScheduler.deleteAllSchedules();
 ## How it works
 
 1. **Exact alarm** — uses `AlarmManager.setExactAndAllowWhileIdle` (not `setRepeating` which is inexact since Android 4.4).
-2. **Self-rescheduling chain** — after each run the callback registers the next day's alarm. This is the only reliable pattern for exact daily scheduling.
+2. **Self-rescheduling chain** — after each run the callback registers the next day's alarm. The reschedule return value is checked — if Android rejects it, the failure is logged and optionally surfaced as a notification.
 3. **Reboot resilience** — `rescheduleOnReboot: true` re-registers the alarm after device restart.
 4. **Battery optimisation** — requesting exemption prevents aggressive OEM battery savers (Samsung OneUI, MIUI, ColorOS…) from suppressing the alarm.
-5. **Stagger for same-time schedules** — each alarm waits `(alarmId % 10) × 2` seconds before its HTTP request, so multiple schedules at the same time never hit the image server simultaneously.
-6. **Retry on server errors** — HTTP 5xx responses and timeouts are retried up to 2 times with a 5-second delay, making updates resilient to transient server issues.
+5. **Stagger for same-time schedules** — each alarm waits a unique delay based on its ID before making the HTTP request, so multiple schedules at the same time never hit the image server simultaneously.
+6. **Retry on server errors** — HTTP 5xx responses and timeouts are retried (configurable via `maxRetries` and `retryDelay`). On no-internet errors, the next attempt is scheduled 30 minutes out instead of 24 hours, so the wallpaper is set as soon as connectivity is restored.
 7. **Isolated cache files** — each alarm downloads to its own temporary file (`apsl_wallpaper_cache_<alarmId>.png`), deleted after use, so concurrent alarms never interfere with each other.
+8. **Content validation** — downloaded responses are checked for a valid `image/` Content-Type and a maximum size of 20 MB before being written to disk.
 
 ---
 
@@ -473,9 +488,13 @@ await ApslWallpaperScheduler.deleteAllSchedules();
 | Works on stock Android but not Samsung/Xiaomi | Request battery-optimisation exemption — these OEMs kill background processes aggressively. |
 | Wallpaper stops updating after app is killed | Fixed in `0.2.2` — update to the latest version. |
 | One of two same-time schedules always fails | Fixed in `0.2.2` — stagger and retry logic handle simultaneous server requests. |
-| `schedule.lastError` shows HTTP 500 | The image server returned an error. The package will retry automatically (up to 2×). Check that your image URL is valid and accessible. |
+| Scheduler fires on day 1 only and never repeats | Fixed in `0.3.0` — update to the latest version. |
+| `schedule.lastError` shows `Reschedule failed` | Enable `showErrorNotifications: true` in `initialize()` to get a notification with the exact reason. Most commonly a revoked `SCHEDULE_EXACT_ALARM` permission — open the app to re-grant it. |
+| `schedule.lastError` shows `[INVALID_CONTENT_TYPE]` | The URL returns a non-image response (e.g. HTML). Use a direct link to a PNG/JPG/WebP file. |
+| `schedule.lastError` shows `[IMAGE_TOO_LARGE]` | The image exceeds the 20 MB limit. Use a smaller or compressed image URL. |
+| `schedule.lastError` shows HTTP 500 | The image server returned an error. The package retries automatically (`maxRetries` times). Check that your image URL is valid and accessible. |
 | `result.requiredPermissions` is non-null after `createSchedule` | Check `hasExactAlarm` and `hasBatteryExemption` and handle each with a dialog. |
-| `createSchedule` returns an error about the URL | The `imageUrl` must be non-empty and start with `http://` or `https://`. |
+| `createSchedule` returns a URL error | The `imageUrl` must be non-empty and start with `http://` or `https://`. Set `validateUrl: true` in the config to catch unreachable URLs at creation time. |
 | Build fails with `Unresolved reference 'shim'` | You have an old `workmanager` version. Remove it. |
 | `isCoreLibraryDesugaringEnabled` error | Add the desugaring config to `build.gradle.kts` as shown in setup. |
 | `ApslWallpaperScheduler is not initialised` | Call `ApslWallpaperScheduler.initialize()` in `main()` before `runApp`. |

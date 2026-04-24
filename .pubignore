@@ -4,3 +4,6 @@ example/.dart_tool/
 example/.flutter-plugins-dependencies
 example/android/local.properties
 example/android/app/src/main/java/io/flutter/plugins/GeneratedPluginRegistrant.java
+
+# Internal development file — not intended for package consumers
+limitations.md

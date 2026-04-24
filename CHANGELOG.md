@@ -1,3 +1,95 @@
+## 0.3.0
+
+**Reliability overhaul, new configuration options, and reschedule failure notifications**
+
+### Bug fixes
+
+* **Fixed: scheduler fires only on day 1 and never again.**
+  Two root causes fixed: (1) `flutter_local_notifications` `initialize()` can hang
+  indefinitely in a background isolate — a 10-second timeout now ensures the
+  reschedule step always runs regardless of notification state. (2) `oneShotAt()`
+  returns `Future<bool>` — `false` means Android silently rejected the alarm, but the
+  return value was previously discarded. It is now checked and logged to `lastError`.
+
+* **Fixed: storage failure before reschedule permanently broke the alarm chain.**
+  Both `findByAlarmId` calls in the alarm callback are now wrapped in `try-catch`.
+  If SharedPreferences throws (storage full, corrupted file, Android I/O error), the
+  first call falls back to a conservative 24-hour reschedule; the second (orphan guard)
+  proceeds with the reschedule rather than silently returning.
+
+* **Fixed: orphaned alarm fires forever after a schedule is deleted mid-callback.**
+  The record is now re-fetched from storage immediately before rescheduling. If the
+  schedule was deleted or stopped while the download was running, the reschedule is
+  skipped — no ghost alarm is registered.
+
+* **Fixed: multiple schedules with alarm IDs divisible by 10 received 0-second stagger.**
+  The stagger formula now combines both parts of the alarm ID so every ID in a
+  typical range maps to a unique delay.
+
+* **Fixed: DST transitions could cause the daily alarm to fire at the wrong time.**
+  Reschedule now uses calendar `day + 1` construction instead of adding a fixed
+  `Duration`, so the next fire time is always the correct local calendar day
+  regardless of clocks-forward or clocks-back transitions.
+
+* **Fixed: device offline permanently skips wallpaper for the day.**
+  On a `[NO_INTERNET]` error the next alarm is now scheduled 30 minutes out instead
+  of 24 hours, retrying every 30 minutes until connectivity is restored.
+
+* **Fixed: non-image URL (HTML, JSON) passed directly to `setWallpaper`.**
+  The `Content-Type` response header is now validated. A non-image response throws
+  `[INVALID_CONTENT_TYPE]` with a clear hint instead of a cryptic native failure.
+
+* **Fixed: oversized images could crash the background isolate with OOM.**
+  Images larger than 20 MB are now rejected with `[IMAGE_TOO_LARGE]` before writing
+  to disk.
+
+* **Fixed: alarm ID counter had no upper-bound guard.**
+  Counter now wraps at 2,000,000,000 to stay within Android's int32 AlarmManager ID
+  space and prevent ID collisions after extended use.
+
+* **Fixed: corrupted `hour`/`minute` values in SharedPreferences caused alarms to
+  fire at unexpected times.**
+  Values are now clamped to `0–23` and `0–59` respectively in `fromJson`.
+
+* **Fixed: cache file deletion failures silently accumulate stale files on disk.**
+  Deletion errors are now logged via `debugPrint` instead of being swallowed.
+
+### New features
+
+* **`showErrorNotifications` flag on `initialize()`.**
+  When set to `true`, a local notification is shown whenever the daily alarm
+  reschedule fails — including when Android rejects the alarm (revoked permission),
+  when a storage error is encountered, or when `oneShotAt` throws. The notification
+  body contains the exact, human-readable reason. Defaults to `false`.
+
+  ```dart
+  await ApslWallpaperScheduler.initialize(showErrorNotifications: true);
+  ```
+
+* **`validateUrl` option on `WallpaperScheduleConfig`.**
+  When `true`, a HEAD request is sent to the image URL at schedule-creation time to
+  verify it is reachable. Returns a `ScheduleResult.failure` immediately if the URL
+  returns a non-200 response, rather than discovering the problem days later at alarm
+  fire time. Defaults to `false`.
+
+* **Configurable retry count and delay on `WallpaperScheduleConfig`.**
+  `maxRetries` (default 2) and `retryDelay` (default 20 s) are now per-schedule
+  instead of hardcoded, so consumers with slow image servers can increase retries
+  and consumers with fast servers can reduce the delay.
+
+  ```dart
+  WallpaperScheduleConfig(
+    name: 'My Wallpaper',
+    imageUrl: 'https://example.com/image.png',
+    time: const TimeOfDay(hour: 8, minute: 0),
+    validateUrl: true,
+    maxRetries: 4,
+    retryDelay: const Duration(seconds: 10),
+  )
+  ```
+
+---
+
 ## 0.2.5
 
 **Reliability & error diagnostics improvements**
