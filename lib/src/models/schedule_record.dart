@@ -15,6 +15,8 @@ class ScheduleRecord {
   final int alarmId;
   final String lastUpdated;
   final String lastError;
+  final int maxRetries;
+  final int retryDelaySeconds;
 
   const ScheduleRecord({
     required this.id,
@@ -27,6 +29,8 @@ class ScheduleRecord {
     required this.alarmId,
     this.lastUpdated = '',
     this.lastError = '',
+    this.maxRetries = 2,
+    this.retryDelaySeconds = 20,
   });
 
   /// Converts to the public-facing [WallpaperSchedule] (hides [alarmId]).
@@ -54,6 +58,8 @@ class ScheduleRecord {
     int? alarmId,
     String? lastUpdated,
     String? lastError,
+    int? maxRetries,
+    int? retryDelaySeconds,
   }) =>
       ScheduleRecord(
         id: id ?? this.id,
@@ -66,6 +72,8 @@ class ScheduleRecord {
         alarmId: alarmId ?? this.alarmId,
         lastUpdated: lastUpdated ?? this.lastUpdated,
         lastError: lastError ?? this.lastError,
+        maxRetries: maxRetries ?? this.maxRetries,
+        retryDelaySeconds: retryDelaySeconds ?? this.retryDelaySeconds,
       );
 
   Map<String, dynamic> toJson() => {
@@ -79,18 +87,23 @@ class ScheduleRecord {
         'alarmId': alarmId,
         'lastUpdated': lastUpdated,
         'lastError': lastError,
+        'maxRetries': maxRetries,
+        'retryDelaySeconds': retryDelaySeconds,
       };
 
   factory ScheduleRecord.fromJson(Map<String, dynamic> j) => ScheduleRecord(
         id: j['id'] as String? ?? '',
         name: j['name'] as String? ?? 'Unnamed',
         imageUrl: j['imageUrl'] as String? ?? '',
-        hour: j['hour'] as int? ?? 8,
-        minute: j['minute'] as int? ?? 0,
+        // Clamp hour/minute to valid ranges — protects against corrupted storage.
+        hour: ((j['hour'] as int?) ?? 8).clamp(0, 23),
+        minute: ((j['minute'] as int?) ?? 0).clamp(0, 59),
         targetValue: j['targetValue'] as int? ?? 3,
         isActive: j['isActive'] as bool? ?? false,
         alarmId: j['alarmId'] as int? ?? 0,
         lastUpdated: j['lastUpdated'] as String? ?? '',
         lastError: j['lastError'] as String? ?? '',
+        maxRetries: ((j['maxRetries'] as int?) ?? 2).clamp(0, 10),
+        retryDelaySeconds: ((j['retryDelaySeconds'] as int?) ?? 20).clamp(1, 300),
       );
 }

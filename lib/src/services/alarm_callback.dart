@@ -34,11 +34,11 @@ void apslAlarmCallback(int alarmId) async {
   WidgetsFlutterBinding.ensureInitialized();
   DartPluginRegistrant.ensureInitialized();
 
-  // Stagger each alarm by (alarmId % 10) * 2 seconds (0–18 s).
-  // When multiple schedules fire at the same time, this spreads their HTTP
-  // requests so they never hit the image server simultaneously, preventing
-  // the server from rate-limiting and returning HTTP 500 on the second request.
-  await Future.delayed(Duration(seconds: (alarmId % 10) * 2));
+  // Improved stagger: combines both digits of the alarmId so that IDs that
+  // are multiples of 10 (e.g. 100, 110, 120) no longer all map to 0 seconds.
+  // Spreads simultaneous alarms across 0–18 s without any two sharing the
+  // same delay unless there are more than 10 concurrent schedules.
+  await Future.delayed(Duration(seconds: ((alarmId % 10) + (alarmId ~/ 10) % 5) * 2));
 
   // Look up the schedule that owns this alarm.
   final record = await ScheduleStorage.findByAlarmId(alarmId);
@@ -55,7 +55,12 @@ void apslAlarmCallback(int alarmId) async {
     // Pass alarmId so each schedule uses its own isolated cache file,
     // preventing race conditions when multiple schedules fire at the same time.
     await WallpaperService.downloadAndSet(
-        record.imageUrl, record.targetValue, record.alarmId);
+      record.imageUrl,
+      record.targetValue,
+      record.alarmId,
+      maxRetries: record.maxRetries,
+      retryDelay: Duration(seconds: record.retryDelaySeconds),
+    );
     wallpaperSuccess = true;
   } catch (e) {
     coreError = e;
@@ -95,14 +100,27 @@ void apslAlarmCallback(int alarmId) async {
     // Notification failure or timeout is non-fatal; swallow silently.
   }
 
-  // Reschedule for the same time tomorrow so the daily chain continues.
-  // Uses `now` captured before the download to avoid midnight-drift bugs.
-  final next =
-      DateTime(now.year, now.month, now.day, record.hour, record.minute)
-          .add(const Duration(days: 1));
+  // ── RESCHEDULE ────────────────────────────────────────────────────────────
+  // Re-fetch the record to guard against a deletion that happened while the
+  // download or notification was running — avoids registering an orphaned
+  // alarm that fires forever with no matching schedule record.
+  final currentRecord = await ScheduleStorage.findByAlarmId(alarmId);
+  if (currentRecord == null || !currentRecord.isActive) return;
+
+  // Determine next fire time:
+  // • Offline error → retry in 30 minutes so the wallpaper is set as soon as
+  //   connectivity is restored, rather than waiting a full 24 hours.
+  // • Any other outcome → schedule for the same clock time tomorrow.
+  //   Uses day+1 construction (not Duration arithmetic) so the result is
+  //   always the correct calendar day regardless of DST transitions.
+  final bool isOffline = coreError?.toString().contains('[NO_INTERNET]') == true;
+  final DateTime nextTime = isOffline
+      ? DateTime.now().add(const Duration(minutes: 30))
+      : DateTime(now.year, now.month, now.day + 1, record.hour, record.minute);
+
   try {
     final scheduled = await AndroidAlarmManager.oneShotAt(
-      next,
+      nextTime,
       alarmId,
       apslAlarmCallback,
       exact: true,

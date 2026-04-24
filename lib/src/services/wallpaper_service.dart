@@ -2,11 +2,16 @@
 
 import 'dart:async';
 import 'dart:io';
+import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:path_provider/path_provider.dart';
 import 'package:wallpaper_manager_flutter/wallpaper_manager_flutter.dart';
 
 class WallpaperService {
+  static const int _defaultMaxRetries = 2;
+  static const Duration _defaultRetryDelay = Duration(seconds: 20);
+  static const int _maxImageBytes = 20 * 1024 * 1024; // 20 MB
+
   /// Returns a unique cache file per [alarmId] so that concurrent alarm
   /// callbacks (multiple schedules at the same time) never overwrite each
   /// other's downloaded image.
@@ -17,17 +22,15 @@ class WallpaperService {
 
   /// Downloads the image at [url] and saves it to a per-alarm cache file.
   ///
-  /// Retries up to [_maxRetries] times (with a [_retryDelay] pause between
+  /// Retries up to [maxRetries] times (with a [retryDelay] pause between
   /// attempts) when the server returns a 5xx error or the request times out.
-  /// This handles server-side rate limiting that occurs when multiple schedules
-  /// fire at the same time and hit the image server simultaneously.
-  ///
   /// Throws an [Exception] if all attempts fail.
-  static const int _maxRetries = 2;
-  static const Duration _retryDelay = Duration(seconds: 20);
-
-  static Future<void> downloadAndSave(String url, int alarmId) async {
-    // Validate URL before any network call so we get a clear error immediately.
+  static Future<void> downloadAndSave(
+    String url,
+    int alarmId, {
+    int maxRetries = _defaultMaxRetries,
+    Duration retryDelay = _defaultRetryDelay,
+  }) async {
     final Uri uri;
     try {
       uri = Uri.parse(url);
@@ -45,10 +48,10 @@ class WallpaperService {
     }
 
     Exception? lastError;
-    final total = _maxRetries + 1;
+    final total = maxRetries + 1;
 
-    for (int attempt = 0; attempt <= _maxRetries; attempt++) {
-      if (attempt > 0) await Future.delayed(_retryDelay);
+    for (int attempt = 0; attempt <= maxRetries; attempt++) {
+      if (attempt > 0) await Future.delayed(retryDelay);
       final label = 'Attempt ${attempt + 1}/$total';
       try {
         final response = await http
@@ -56,6 +59,25 @@ class WallpaperService {
             .timeout(const Duration(seconds: 60));
 
         if (response.statusCode == 200) {
+          // Validate that the response is actually an image.
+          final contentType = (response.headers['content-type'] ?? '').toLowerCase();
+          if (!contentType.startsWith('image/') && !contentType.contains('octet-stream')) {
+            throw Exception(
+                '[INVALID_CONTENT_TYPE] $label — Expected an image but got: $contentType\n'
+                'URL: $url\n'
+                'Hint: The URL must point directly to an image file (PNG, JPG, WebP, etc.), '
+                'not a webpage or API endpoint.');
+          }
+
+          // Guard against oversized images that could exhaust memory.
+          if (response.bodyBytes.length > _maxImageBytes) {
+            throw Exception(
+                '[IMAGE_TOO_LARGE] $label — Image is ${response.bodyBytes.length ~/ (1024 * 1024)} MB, '
+                'which exceeds the 20 MB limit.\n'
+                'URL: $url\n'
+                'Hint: Use a smaller or compressed image URL.');
+          }
+
           final file = await _cacheFile(alarmId);
           await file.writeAsBytes(response.bodyBytes);
           return; // success — exit immediately
@@ -63,9 +85,6 @@ class WallpaperService {
 
         final category =
             response.statusCode >= 500 ? 'SERVER_ERROR' : 'HTTP_${response.statusCode}';
-        // Include up to 300 chars of the response body — backend APIs often
-        // return a JSON error message (e.g. {"error":"token expired"}) that
-        // makes the root cause immediately obvious.
         final body = response.body.trim();
         final bodySnippet = body.isNotEmpty
             ? '\nServer Response: ${body.length > 300 ? '${body.substring(0, 300)}…' : body}'
@@ -75,7 +94,6 @@ class WallpaperService {
             'URL: $url\n'
             'Hint: ${_statusHint(response.statusCode)}');
 
-        // Only retry on server-side (5xx) errors; fail fast on 4xx.
         if (response.statusCode < 500) throw lastError;
       } on TimeoutException {
         lastError = Exception(
@@ -102,17 +120,6 @@ class WallpaperService {
   }
 
   /// Sets the cached image as the device wallpaper on [targetValue] screen(s).
-  ///
-  /// [targetValue] must be 1 (home), 2 (lock), or 3 (both).
-  ///
-  /// When [targetValue] is 3 (both), the wallpaper is set on home and lock
-  /// screens via two separate calls instead of a single combined call.
-  /// Many Android OEM implementations (MIUI, One UI, etc.) do not reliably
-  /// honour the combined FLAG_SYSTEM|FLAG_LOCK bitmask in a single
-  /// WallpaperManager.setStream() call, causing it to silently fail.
-  ///
-  /// Always deletes the per-alarm cache file after use — whether the
-  /// wallpaper set succeeds or throws — to avoid stale files accumulating.
   static Future<void> setWallpaper(int targetValue, int alarmId) async {
     final file = await _cacheFile(alarmId);
     if (!await file.exists()) {
@@ -124,7 +131,6 @@ class WallpaperService {
     final plugin = WallpaperManagerFlutter();
     try {
       if (targetValue == 3) {
-        // Set home and lock screens separately for reliable OEM compatibility.
         await plugin.setWallpaper(file, WallpaperManagerFlutter.homeScreen);
         await plugin.setWallpaper(file, WallpaperManagerFlutter.lockScreen);
       } else {
@@ -139,16 +145,41 @@ class WallpaperService {
           'wallpaper changes. Grant "Display over other apps" permission or '
           'disable battery optimisation for this app in device settings.');
     } finally {
-      // Delete regardless of success or failure to keep storage clean.
-      await file.delete().catchError((_) => file);
+      await file.delete().catchError((e) {
+        debugPrint('[WallpaperService] Failed to delete cache file: $e');
+        return file;
+      });
     }
   }
 
   /// Convenience: download then set in one call.
   static Future<void> downloadAndSet(
-      String url, int targetValue, int alarmId) async {
-    await downloadAndSave(url, alarmId);
+    String url,
+    int targetValue,
+    int alarmId, {
+    int maxRetries = _defaultMaxRetries,
+    Duration retryDelay = _defaultRetryDelay,
+  }) async {
+    await downloadAndSave(url, alarmId, maxRetries: maxRetries, retryDelay: retryDelay);
     await setWallpaper(targetValue, alarmId);
+  }
+
+  /// Sends a HEAD request to [url] to verify it is reachable and returns an
+  /// image. Returns `null` on success, or an error message string on failure.
+  /// Used by [ApslWallpaperScheduler.createSchedule] when [validateUrl] is true.
+  static Future<String?> validateUrl(String url) async {
+    try {
+      final uri = Uri.parse(url);
+      final response = await http.head(uri).timeout(const Duration(seconds: 10));
+      if (response.statusCode == 200) return null;
+      return 'URL returned HTTP ${response.statusCode}. ${_statusHint(response.statusCode)}';
+    } on TimeoutException {
+      return 'URL did not respond within 10 seconds. Check if it is accessible.';
+    } on SocketException catch (e) {
+      return 'Network error while validating URL: ${e.message}';
+    } catch (e) {
+      return 'Could not validate URL: $e';
+    }
   }
 
   static int _toPluginLocation(int targetValue) {

@@ -24,11 +24,29 @@ class WallpaperScheduleConfig {
   /// can activate it later with [ApslWallpaperScheduler.startSchedule].
   final bool activate;
 
+  /// If `true`, a HEAD request is sent to [imageUrl] at schedule creation time
+  /// to verify the URL is reachable before saving the schedule.
+  /// Defaults to `false` to avoid breaking integrations with servers that do
+  /// not support HEAD or require specific headers.
+  final bool validateUrl;
+
+  /// Maximum number of retry attempts after the first download failure.
+  /// Defaults to 2 (3 total attempts). Only 5xx errors and timeouts are
+  /// retried; 4xx errors fail immediately.
+  final int maxRetries;
+
+  /// How long to wait between download retry attempts.
+  /// Defaults to 20 seconds.
+  final Duration retryDelay;
+
   const WallpaperScheduleConfig({
     required this.name,
     required this.imageUrl,
     required this.time,
     this.target = WallpaperTarget.both,
     this.activate = true,
+    this.validateUrl = false,
+    this.maxRetries = 2,
+    this.retryDelay = const Duration(seconds: 20),
   });
 }

@@ -7,6 +7,7 @@ import 'models/wallpaper_schedule.dart';
 import 'services/alarm_callback.dart'; // ensures apslAlarmCallback is compiled in
 import 'services/alarm_service.dart';
 import 'services/notification_service.dart';
+import 'services/wallpaper_service.dart';
 import 'storage/schedule_storage.dart';
 
 /// The main entry point for the `apsl_wallpaper_scheduler` package.
@@ -60,6 +61,10 @@ class ApslWallpaperScheduler {
     _assertInitialized();
     final urlValidationError = _validateUrl(config.imageUrl);
     if (urlValidationError != null) return ScheduleResult.failure(urlValidationError);
+    if (config.validateUrl) {
+      final reachabilityError = await WallpaperService.validateUrl(config.imageUrl.trim());
+      if (reachabilityError != null) return ScheduleResult.failure(reachabilityError);
+    }
     try {
       final alarmId = await ScheduleStorage.nextAlarmId();
       final id = DateTime.now().millisecondsSinceEpoch.toString();
@@ -73,6 +78,8 @@ class ApslWallpaperScheduler {
         targetValue: config.target.value,
         isActive: false,
         alarmId: alarmId,
+        maxRetries: config.maxRetries,
+        retryDelaySeconds: config.retryDelay.inSeconds,
       );
 
       if (config.activate) {
@@ -111,6 +118,10 @@ class ApslWallpaperScheduler {
     _assertInitialized();
     final urlValidationError = _validateUrl(config.imageUrl);
     if (urlValidationError != null) return ScheduleResult.failure(urlValidationError);
+    if (config.validateUrl) {
+      final reachabilityError = await WallpaperService.validateUrl(config.imageUrl.trim());
+      if (reachabilityError != null) return ScheduleResult.failure(reachabilityError);
+    }
     try {
       final existing = await ScheduleStorage.findById(id);
       if (existing == null) {
@@ -130,6 +141,8 @@ class ApslWallpaperScheduler {
         // Keep last update history.
         lastUpdated: existing.lastUpdated,
         lastError: existing.lastError,
+        maxRetries: config.maxRetries,
+        retryDelaySeconds: config.retryDelay.inSeconds,
       );
 
       if (config.activate) {

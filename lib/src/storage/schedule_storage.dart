@@ -89,7 +89,8 @@ class ScheduleStorage {
   static Future<int> nextAlarmId() async {
     final prefs = await SharedPreferences.getInstance();
     final current = prefs.getInt(_counterKey) ?? 100;
-    final next = current + 1;
+    // Wrap before Android's int32 AlarmManager ID limit to prevent overflow.
+    final next = (current >= 2000000000) ? 101 : current + 1;
     await prefs.setInt(_counterKey, next);
     return next;
   }
