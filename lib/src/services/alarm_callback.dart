@@ -8,6 +8,7 @@ import 'dart:ui' show DartPluginRegistrant;
 
 import 'package:android_alarm_manager_plus/android_alarm_manager_plus.dart';
 import 'package:flutter/widgets.dart';
+import '../models/schedule_record.dart';
 import '../storage/schedule_storage.dart';
 import '../services/wallpaper_service.dart';
 import '../services/notification_service.dart';
@@ -41,7 +42,26 @@ void apslAlarmCallback(int alarmId) async {
   await Future.delayed(Duration(seconds: ((alarmId % 10) + (alarmId ~/ 10) % 5) * 2));
 
   // Look up the schedule that owns this alarm.
-  final record = await ScheduleStorage.findByAlarmId(alarmId);
+  // Wrapped in try-catch: if SharedPreferences throws (storage full, corrupted
+  // file, Android I/O error), we still reschedule 24 h from now so the chain
+  // is preserved even though we can't set the wallpaper this cycle.
+  ScheduleRecord? record;
+  try {
+    record = await ScheduleStorage.findByAlarmId(alarmId);
+  } catch (_) {
+    try {
+      await AndroidAlarmManager.oneShotAt(
+        now.add(const Duration(hours: 24)),
+        alarmId,
+        apslAlarmCallback,
+        exact: true,
+        wakeup: true,
+        allowWhileIdle: true,
+        rescheduleOnReboot: true,
+      );
+    } catch (_) {}
+    return;
+  }
   if (record == null || !record.isActive) return;
 
   // ── CORE ──────────────────────────────────────────────────────────────────
@@ -104,8 +124,14 @@ void apslAlarmCallback(int alarmId) async {
   // Re-fetch the record to guard against a deletion that happened while the
   // download or notification was running — avoids registering an orphaned
   // alarm that fires forever with no matching schedule record.
-  final currentRecord = await ScheduleStorage.findByAlarmId(alarmId);
-  if (currentRecord == null || !currentRecord.isActive) return;
+  // On storage failure, proceed conservatively: it is safer to fire one extra
+  // alarm than to permanently break the chain by skipping the reschedule.
+  try {
+    final currentRecord = await ScheduleStorage.findByAlarmId(alarmId);
+    if (currentRecord == null || !currentRecord.isActive) return;
+  } catch (_) {
+    // Storage read failed — assume still active and fall through to reschedule.
+  }
 
   // Determine next fire time:
   // • Offline error → retry in 30 minutes so the wallpaper is set as soon as
