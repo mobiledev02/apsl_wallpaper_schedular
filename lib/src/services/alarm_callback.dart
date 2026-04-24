@@ -75,21 +75,24 @@ void apslAlarmCallback(int alarmId) async {
   }
 
   // ── NOTIFICATION (helper — must never affect core result) ─────────────────
+  // A 10-second timeout guards against flutter_local_notifications'
+  // initialize() hanging in the background isolate, which would block the
+  // reschedule below and permanently break the daily chain.
   try {
     if (wallpaperSuccess) {
       await NotificationService.showUpdateNotification(
         notifId: alarmId,
         scheduleName: record.name,
-      );
+      ).timeout(const Duration(seconds: 10));
     } else {
       await NotificationService.showFailureNotification(
         notifId: alarmId,
         scheduleName: record.name,
         reason: coreError.toString(),
-      );
+      ).timeout(const Duration(seconds: 10));
     }
   } catch (_) {
-    // Notification failure is non-fatal; swallow silently.
+    // Notification failure or timeout is non-fatal; swallow silently.
   }
 
   // Reschedule for the same time tomorrow so the daily chain continues.
@@ -98,7 +101,7 @@ void apslAlarmCallback(int alarmId) async {
       DateTime(now.year, now.month, now.day, record.hour, record.minute)
           .add(const Duration(days: 1));
   try {
-    await AndroidAlarmManager.oneShotAt(
+    final scheduled = await AndroidAlarmManager.oneShotAt(
       next,
       alarmId,
       apslAlarmCallback,
@@ -107,6 +110,12 @@ void apslAlarmCallback(int alarmId) async {
       allowWhileIdle: true,
       rescheduleOnReboot: true,
     );
+    if (!scheduled) {
+      // oneShotAt returns false when Android rejects the alarm — most commonly
+      // a missing SCHEDULE_EXACT_ALARM permission on Android 12+.
+      await ScheduleStorage.updateLastError(record.id,
+          'Reschedule failed: Android rejected the alarm (SCHEDULE_EXACT_ALARM permission may have been revoked)');
+    }
   } catch (e) {
     // If rescheduling fails the daily chain would break permanently, so log it.
     await ScheduleStorage.updateLastError(
